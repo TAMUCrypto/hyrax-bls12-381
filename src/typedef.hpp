@@ -15,10 +15,4 @@ typedef long long i64;
 typedef int i32;
 typedef char i8;
 
-typedef u64 p224_limb;
-typedef u128 p224_widelimb;
-
-typedef p224_limb p224_felem[4];
-typedef p224_widelimb p224_widefelem[7];
-
 #endif //HYRAX_P224_TYPEDEF_HPP

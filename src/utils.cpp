@@ -3,7 +3,11 @@
 //
 
 #include "utils.hpp"
-namespace hyrax_p224 {
+#include <vector>
+#include <cmath>
+using std::vector;
+
+namespace hyrax_bls12_381 {
     u8 myLog2(u64 x) {
         return (u8) ceil(log(x) / log(2));
     }
@@ -13,7 +17,7 @@ namespace hyrax_p224 {
         return x == 1ULL << tmp;
     }
 
-    void split(vector<fieldElement> &L, vector<fieldElement> &R, const vector<fieldElement> &r) {
+    void split(vector<Fr> &L, vector<Fr> &R, const vector<Fr> &r) {
         u64 rsize = r.size() >> 1;
         u64 lsize = r.size() - rsize;
         L.clear();
@@ -22,16 +26,16 @@ namespace hyrax_p224 {
         R.insert(R.end(), r.begin() + lsize, r.end());
     }
 
-    vector<fieldElement> expand(const vector<fieldElement> &v) {
-        vector<fieldElement> V;
-        vector<fieldElement> beta_f, beta_s;
+    vector<Fr> expand(const vector<Fr> &v) {
+        vector<Fr> V;
+        vector<Fr> beta_f, beta_s;
 
         u64 first_half = v.size() >> 1;
         u64 second_half = v.size() - first_half;
         u64 mask = (1ULL << first_half) - 1;
 
         beta_f.resize(1ULL << first_half);
-        beta_f[0] = fieldElement::one();
+        beta_f[0] = Fr::one();
         for (u64 i = 0; i < first_half; ++i) {
             for (u64 j = 0; j < (1ULL << i); ++j) {
                 auto tmp = beta_f.at(j) * v[i];
@@ -41,7 +45,7 @@ namespace hyrax_p224 {
         }
 
         beta_s.resize(1ULL << second_half);
-        beta_s[0] = fieldElement::one();
+        beta_s[0] = Fr::one();
         for (u64 i = 0; i < second_half; ++i) {
             for (u64 j = 0; j < (1ULL << i); ++j) {
                 auto tmp = beta_s[j] * v[(i + first_half)];

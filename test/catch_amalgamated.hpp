@@ -7591,7 +7591,7 @@ namespace Catch {
 
 // We want a simple polyfill over `std::empty`, `std::size` and so on
 // for C++14 or C++ libraries with incomplete support.
-// We also have to handle that MSVC std lib will happily provide these
+// We also have to handle that MSVC std 3rd will happily provide these
 // under older standards.
 #if defined(CATCH_CPP17_OR_GREATER) || defined(_MSC_VER)
 

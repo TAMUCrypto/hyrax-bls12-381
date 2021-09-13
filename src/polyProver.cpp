@@ -3,17 +3,15 @@
 //
 
 #include "polyProver.hpp"
-#include "wnaf.hpp"
-
 using std::vector;
-namespace hyrax_p224 {
-    polyProver::polyProver(const vector<fieldElement> &_Z, const vector<groupElement> &_gens) :
-            Z(_Z), gens(_gens), multiplier(_gens) {
+namespace hyrax_bls12_381 {
+    polyProver::polyProver(const vector<Fr> &_Z, const vector<G1> &_gens) :
+            Z(_Z), gens(_gens) {
         bit_length = myLog2(_Z.size());
         ps = 0;
     }
 
-    vector<groupElement> polyProver::commit() {
+    vector<G1> polyProver::commit() {
         pt.start();
         u8 r_bit_length = bit_length >> 1;
         u8 l_bit_length = bit_length - r_bit_length;
@@ -23,18 +21,18 @@ namespace hyrax_p224 {
 
         comm_Z.resize(rsize);
         for (u64 i = 0; i < rsize; ++i)
-            comm_Z[i] = multiplier.multiExponential(Z.begin() + i * lsize, Z.begin() + (i + 1) * lsize);
+            G1::mulVec(comm_Z[i], gens.data(), Z.data() + i * lsize, lsize);
 
         pt.stop();
-        ps += (3 * sizeof(fieldElement)) * comm_Z.size();
+        ps += sizeof(G1) * comm_Z.size();
         return comm_Z;
     }
 
-    fieldElement polyProver::evaluate(const vector<fieldElement> &x) {
+    Fr polyProver::evaluate(const vector<Fr> &x) {
         auto X = expand(x);
-        auto res = fieldElement::zero();
+        Fr res;
         assert(X.size() == Z.size());
-        for (u64 i = 0; i < X.size(); ++i) res += Z[i] * X[i];
+        for (u64 i = 0; i < X.size(); ++i) res = !i ? Z[i] * X[i] : res + Z[i] * X[i];
         return res;
     }
 
@@ -46,7 +44,9 @@ namespace hyrax_p224 {
         return ps / 1024.0;
     }
 
-    void polyProver::initBulletProve(const vector<fieldElement> &_lx, const vector<fieldElement> &_rx) {
+    void polyProver::initBulletProve(const vector<Fr> &_lx, const vector<Fr> &_rx) {
+        Fr zero;
+        zero.clear();
         pt.start();
 
         t = _lx;
@@ -57,52 +57,43 @@ namespace hyrax_p224 {
         assert(lsize_ex * rsize_ex == Z.size());
         assert(lsize_ex == gens.size());
 
-        ZR.resize(lsize_ex, fieldElement::zero());
+        RZ.resize(lsize_ex, zero);
         for (u64 j = 0; j < rsize_ex; ++j)
             for (u64 i = 0; i < lsize_ex; ++i)
-                ZR[i] += Z[j * lsize_ex + i] * R[j];
-
-//        pippenger::mulExp m2(comm_Z);
-//        assert(multiplier.multiExponential(ZR) == m2.multiExponential(R));
-        groupElement res;
-        for (int i = 0; i < R.size(); ++i) {
-            for (int j = 0; j < L.size(); ++j) {
-                if (!i && !j) res = gens[j] * (R[i] * Z[i * lsize_ex + j]);
-                else res += gens[j] * (R[i] * Z[i * lsize_ex + j]);
-            }
-        }
-        auto res2 = comm_Z[0] * R[0];
-        for (int i = 1; i < R.size(); ++i) res2 += comm_Z[i] * R[i];
-        res.print();
-        res2.print();
-        assert(res2 == res);
+                RZ[i] = !j ? R[j] * Z[j * lsize_ex + i] : RZ[i] + R[j] * Z[j * lsize_ex + i];
 
         bullet_g = gens;
-        bullet_a = ZR;
-        scale = fieldElement::one();
+        bullet_a = RZ;
+        scale = Fr::one();
         pt.stop();
     }
 
-    void polyProver::bulletProve(groupElement &lcomm, groupElement &rcomm, fieldElement &ly, fieldElement &ry) {
+    void polyProver::bulletProve(G1 &lcomm, G1 &rcomm, Fr &ly, Fr &ry) {
         pt.start();
         assert(!(bullet_a.size() & 1));
         u64 hsize = bullet_a.size() >> 1;
 
-        pippenger::mulExp bullet_multiplier1(vector<groupElement>(bullet_g.begin(), bullet_g.begin() + hsize));
-        pippenger::mulExp bullet_multiplier2(vector<groupElement>(bullet_g.begin() + hsize, bullet_g.end()));
-        lcomm = bullet_multiplier2.multiExponential(bullet_a.begin(), bullet_a.begin() + hsize);
-        rcomm = bullet_multiplier1.multiExponential(bullet_a.begin() + hsize, bullet_a.end());
+        G1::mulVec(lcomm, bullet_g.data(), bullet_a.data(), hsize);
+        G1::mulVec(rcomm, bullet_g.data() + hsize, bullet_a.data() + hsize, hsize);
 
-        scale *= (fieldElement::one() - t.back()).inv();
-        ly = fieldElement::innerProd(bullet_a.begin(), L.begin(), hsize) * scale;
-        ry = fieldElement::innerProd(bullet_a.begin() + hsize, L.begin(), hsize) * scale;
+        Fr tmp;
+        Fr::inv(tmp, Fr::one() - t.back());
+        scale *= tmp;
+
+        for (int i = 0; i < hsize; ++i) {
+            ly = !i ? bullet_a[i] * L[i] : ly + bullet_a[i] * L[i];
+            ry = !i ? bullet_a[i + hsize] * L[i] : ry + bullet_a[i + hsize] * L[i];
+        }
+        ly *= scale;
+        ry *= scale;
         pt.stop();
-        ps += ((3 * sizeof(fieldElement)) + sizeof(fieldElement)) * 2;
+        ps += (sizeof(G1) + sizeof(Fr)) * 2;
     }
 
-    void polyProver::bulletUpdate(const fieldElement &randomness) {
+    void polyProver::bulletUpdate(const Fr &randomness) {
         pt.start();
-        auto irandomness = randomness.inv();
+        Fr irandomness;
+        Fr::inv(irandomness, randomness);
         u64 hsize = bullet_a.size() >> 1;
         for (u64 i = 0; i < hsize; ++i) bullet_a[i] = bullet_a[i] * randomness + bullet_a[i + hsize];
         for (u64 i = 0; i < hsize; ++i) bullet_g[i] = bullet_g[i] * irandomness + bullet_g[i + hsize];
@@ -112,14 +103,14 @@ namespace hyrax_p224 {
         pt.stop();
     }
 
-    fieldElement polyProver::bulletOpen() {
+    Fr polyProver::bulletOpen() {
         assert(bullet_a.size() == 1);
 
-        ps += sizeof(fieldElement);
+        ps += sizeof(Fr);
         return bullet_a.back();
     }
 
-    const vector<groupElement> &polyProver::getGens() const {
+    const vector<G1> &polyProver::getGens() const {
         return gens;
     }
 }

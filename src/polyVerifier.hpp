@@ -7,35 +7,33 @@
 
 
 #include "polyProver.hpp"
-#include "fieldElement.hpp"
-#include "groupElement.hpp"
 #include "utils.hpp"
+#include <vector>
+using std::vector;
 
-namespace hyrax_p224 {
-    using std::unique_ptr;
+namespace hyrax_bls12_381 {
     class polyVerifier {
     public:
-        polyVerifier(polyProver &_p, const vector<groupElement> &_gens);
+        polyVerifier(polyProver &_p, const vector<G1> &_gens);
 
-        bool verify(const vector<fieldElement> &_x, const fieldElement &LZR);
+        bool verify(const vector<Fr> &_x, const Fr &RZL);
 
         double getVT() { return vt.elapse_sec() - p.getPT(); }
     private:
 
-        bool bulletVerify(vector<groupElement> g, vector<fieldElement> t, groupElement comm, fieldElement y);
+        bool bulletVerify(vector<G1> g, vector<Fr> t, G1 comm, Fr y);
 
         polyProver &p;
 
-        vector<fieldElement> x, lx, rx;
+        vector<Fr> x, lx, rx;
 
-        vector<groupElement> gens;
-        groupElement blind;
+        vector<G1> gens;
+        G1 blind;
 
-        vector<groupElement> comm_Z;
-        groupElement comm_ZR;
+        vector<G1> comm_Z;
+        G1 comm_RZ;
 
         timer vt;
-        unique_ptr<pippenger::mulExp> commZ_multiplier;
     };
 }
 

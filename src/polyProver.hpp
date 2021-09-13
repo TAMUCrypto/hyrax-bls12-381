@@ -6,52 +6,52 @@
 #define HYRAX_P224_POLYPROVER_HPP
 
 
-#include "fieldElement.hpp"
 #include "timer.hpp"
-#include "groupElement.hpp"
 #include "utils.hpp"
-#include "pippenger.hpp"
+#include "typedef.hpp"
+#include <vector>
+#include <mcl/bls12_381.hpp>
+using std::vector;
+using namespace mcl::bn;
 
-namespace hyrax_p224 {
+namespace hyrax_bls12_381 {
     class polyProver {
     public:
-        polyProver(const vector<fieldElement> &_Z, const vector<groupElement> &_gens);
+        polyProver(const vector<Fr> &_Z, const vector<G1> &_gens);
 
-        vector<groupElement> commit();
+        vector<G1> commit();
 
-        fieldElement evaluate(const vector<fieldElement> &x);
+        Fr evaluate(const vector<Fr> &x);
 
         double getPT() const;
 
         double getPS() const;
 
-        void initBulletProve(const vector<fieldElement> &_lx, const vector<fieldElement> &_rx);
+        void initBulletProve(const vector<Fr> &_lx, const vector<Fr> &_rx);
 
-        void bulletProve(groupElement &lcomm, groupElement &rcomm, fieldElement &ly, fieldElement &ry);
+        void bulletProve(G1 &lcomm, G1 &rcomm, Fr &ly, Fr &ry);
 
-        void bulletUpdate(const fieldElement &randomness);
+        void bulletUpdate(const Fr &randomness);
 
-        fieldElement bulletOpen();
+        Fr bulletOpen();
 
     private:
-        vector<groupElement> gens;
+        vector<G1> gens;
     public:
-        const vector<groupElement> &getGens() const;
+        const vector<G1> &getGens() const;
 
     private:
-        vector<groupElement> comm_Z;
+        vector<G1> comm_Z;
 
-        vector<fieldElement> Z, L, R, t;
-        vector<fieldElement> ZR;
-        fieldElement scale;
+        vector<Fr> Z, L, R, t;
+        vector<Fr> RZ;
+        Fr scale;
         u8 bit_length;
         timer pt;   // s
         u64 ps;     // KB
 
-        vector<groupElement> bullet_g;
-        vector<fieldElement> bullet_a;
-
-        pippenger::mulExp multiplier;
+        vector<G1> bullet_g;
+        vector<Fr> bullet_a;
     };
 }
 

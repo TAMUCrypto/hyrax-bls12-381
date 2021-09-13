@@ -1,11 +1,11 @@
-# hyrax_p224
+# hyrax_bls12_381-p224
 This is a polynomial commitment implementation refer to [Hyrax](https://eprint.iacr.org/2017/1132.pdf) based on [Nist P-224](https://static.googleusercontent.com/media/research.google.com/zh-CN//pubs/archive/37376.pdf). The underline operations of scalar and group element refers to OpenSSL.
 This scheme is particularly for multi-linear extension of an array.
 
 Here is a simple example to use it:
 ``` C++
 #include "typedef.hpp"
-#include "fieldElement.hpp"
+#include "Fr.hpp"
 #include "polyProver.hpp"
 #include "polyVerifier.hpp"
 #include <bits/stdc++.h>
@@ -34,14 +34,18 @@ int main(int argc, char *argv[]) {
     u64 n = 1ULL << logn;
     u64 n_sqrt = 1ULL << (logn - (logn >> 1));
     vector<F> poly_coeff(n);
-    vector<groupElement> gens(n_sqrt);
+    vector<Ec> gens(n_sqrt);
     vector<F> r(logn);
 
-    for (u64 i = 0; i < n; ++i) poly_coeff[i] = fieldElement::random();   // the original array to be multi-linear extended
-    for (u64 i = 0; i < n_sqrt; ++i) gens[i] = groupElement::random();    // the square root number of generators
-    for (u8 i = 0; i < logn; ++i) r[i] = fieldElement::random();          // the evaluated point
-    hyrax_p224::polyProver p(poly_coeff, gens);
-    hyrax_p224::polyVerifier v(p, gens);
+    for (u64 i = 0; i < n; ++i) poly_coeff[i].setByCSPRNG();
+    for (u64 i = 0; i < n_sqrt; ++i) {
+        Fr tmp;
+        tmp.setByCSPRNG();
+        gens[i] = mcl::bn::getG1basePoint() * tmp;
+    }
+    for (u8 i = 0; i < logn; ++i) r[i].setByCSPRNG();
+    hyrax_bls12_381::polyProver p(poly_coeff, gens);
+    hyrax_bls12_381::polyVerifier v(p, gens);
     v.verify(r, p.evaluate(r));
 
     ans[LOGN_ID] = std::to_string(logn);
