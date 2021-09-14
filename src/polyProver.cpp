@@ -3,6 +3,11 @@
 //
 
 #include "polyProver.hpp"
+#include <mcl/bls12_381.hpp>
+
+#define G1_SIZE (Fp::getByteSize())
+#define Fr_SIZE (Fr::getByteSize())
+
 using std::vector;
 namespace hyrax_bls12_381 {
     polyProver::polyProver(const vector<Fr> &_Z, const vector<G1> &_gens) :
@@ -24,7 +29,7 @@ namespace hyrax_bls12_381 {
             G1::mulVec(comm_Z[i], gens.data(), Z.data() + i * lsize, lsize);
 
         pt.stop();
-        ps += sizeof(G1) * comm_Z.size();
+        ps += G1_SIZE * comm_Z.size();
         return comm_Z;
     }
 
@@ -87,7 +92,7 @@ namespace hyrax_bls12_381 {
         ly *= scale;
         ry *= scale;
         pt.stop();
-        ps += (sizeof(G1) + sizeof(Fr)) * 2;
+        ps += (G1_SIZE + Fr_SIZE) * 2;
     }
 
     void polyProver::bulletUpdate(const Fr &randomness) {
@@ -106,7 +111,7 @@ namespace hyrax_bls12_381 {
     Fr polyProver::bulletOpen() {
         assert(bullet_a.size() == 1);
 
-        ps += sizeof(Fr);
+        ps += Fr_SIZE;
         return bullet_a.back();
     }
 
