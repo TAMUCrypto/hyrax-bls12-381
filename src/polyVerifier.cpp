@@ -35,7 +35,6 @@ namespace hyrax_bls12_381 {
                                     Fr y) {
         timer tmp_timer;
         tmp_timer.start();
-        vt.start();
         G1 lcomm, rcomm;
         Fr ly, ry;
 
@@ -67,7 +66,6 @@ namespace hyrax_bls12_381 {
                 bool res = p.bulletOpen() == y && comm == g.back() * y;
 
                 tmp_timer.stop();
-                vt.stop();
                 fprintf(stderr, "bulletProve time: %.4f\n", tmp_timer.elapse_sec());
 
                 if (!res) {
